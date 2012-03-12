@@ -7,7 +7,36 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @movies = Movie.all
+    options = Hash.new
+    if !params[:sort].blank?
+      options[:order] = "#{params[:sort]} ASC" 
+      @sort = params[:sort]
+    elsif !session[:sort].blank?
+      params[:sort] = session[:sort]
+      options[:order] = "#{params[:sort]} ASC" 
+      @sort = params[:sort]
+      redirect = true
+    end 
+    @ratings = Hash.new
+    if (params[:ratings])
+      @ratings = params[:ratings]
+      options[:conditions] = ["rating IN (?)",@ratings.keys]
+    elsif (session[:ratings])
+      session[:ratings].split(/,/).each do |rating|
+        @ratings[rating] = 1 
+      end
+      params[:ratings] = @ratings
+      redirect = true
+    end
+    redirect_to movies_path(params) if redirect
+    @movies = Movie.find(:all,options);
+    @title_class = "hilite" if params[:sort] == "title"
+    @release_date_class = "hilite" if params[:sort] == "release_date"
+    @title_uri = movies_path(params.update(:sort => 'title'))
+    @release_date_uri = movies_path(params.update(:sort => 'release_date'))
+    @all_ratings = Movie.ratings
+    session[:ratings] = @ratings.keys.join(",")
+    session[:sort] = @sort
   end
 
   def new
